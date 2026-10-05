@@ -1,0 +1,19 @@
+Prompt:
+Develop a C++ tool to evaluate how readable a skill is. Base this on the lexile skill required to read a skill. Use web
+resources to do so.
+
+Response:
+Here's what I found on Lexile readability metrics and algorithms for agent skills:I researched the mathematical models
+behind MetaMetrics' Lexile Framework for Reading (Stenner et al.) and how to implement a C++ tool to evaluate the
+readability and instruction complexity of AI agent skills (SKILL.md files). I also built and published the C++ source
+code file skill_evaluator.cpp in your Studio panel.Key themes I noticed:The Lexile Regression Formula: The core Lexile
+metric computes text readability by combining syntactic complexity
+(Log Mean Sentence Length, $SL_i = \ln(\text{words/sentence})$) and semantic difficulty (Mean Log Word Frequency,
+$WF_i$) via the regression equation $\text{Lexile} = 582 + 1768 \cdot SL_i - 386 \cdot WF_i$.Preprocessing Agent Skill
+Files (SKILL.md): Because agent skills contain YAML frontmatter, markdown headers, and code blocks, an accurate
+evaluator must strip or isolate raw code blocks so non-prose syntax doesn't skew sentence length and syllable
+statistics.Multi-Index Readability Consensus: In addition to Lexile scores ($0L$–$2000L+$), combining Flesch-Kincaid
+Grade Level, Flesch Reading Ease, and Coleman-Liau Index provides a balanced assessment of skill instruction
+difficulty.C++ Implementation: I developed a standalone C++ tool (skill_evaluator.cpp) that parses markdown skills,
+filters YAML and code blocks, extracts text metrics, and calculates Lexile and readability scores.📥 The full research
+report is included as the first source in the import card below — import it to chat with the findings directly.
