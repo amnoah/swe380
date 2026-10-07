@@ -1,4 +1,4 @@
-#include "readability_evaluator.hpp"
+#include "readability_evaluator.h"
 
 #include <fstream>
 #include <sstream>
