@@ -6,7 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(.)
 
-add_executable(MySqliteApp main.cpp dependencies/sqlite3.c)
+add_executable(MySqliteApp main.cpp dependencies/sqlite3.c
+        evaluations/completeness/completeness_evaluator.cpp
+        evaluations/completeness/completeness_evaluator.h)
 
 add_executable(swe380
         main.cpp
