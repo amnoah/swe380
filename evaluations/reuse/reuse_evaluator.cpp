@@ -187,6 +187,7 @@ SkillReuseAnalyzer::SkillReuseAnalyzer(const std::string& dbPath, AnalysisOption
 double SkillReuseAnalyzer::calculateSurvivalRate(const std::string& firstCommit,
                                                   const std::string& lastCommit,
                                                   const std::string& observationCutoff) {
+    // These parse the first usage, last active usage, and evaluation cutoff respectively
     double tFirst = parseIsoTimestampToEpoch(firstCommit);
     double tLast = parseIsoTimestampToEpoch(lastCommit);
     double tCutoff = parseIsoTimestampToEpoch(observationCutoff);
@@ -196,13 +197,14 @@ double SkillReuseAnalyzer::calculateSurvivalRate(const std::string& firstCommit,
     }
 
     if (tFirst <= 0.0) {
-        return 0.50; // Default baseline if commit timestamps were uncollected
+        return 0.00; // Skill was never used or activated
     }
 
     if (tLast < tFirst) {
         tLast = tFirst;
     }
 
+    // How long the skill stayed operationally active before being dropped
     double activeDurationSec = tLast - tFirst;
     double observationSpanSec = tCutoff - tFirst;
 
@@ -210,24 +212,32 @@ double SkillReuseAnalyzer::calculateSurvivalRate(const std::string& firstCommit,
         return 1.0;
     }
 
+    // If the skill was used within the last 30 days of the cutoff, it hasn't been dropped yet
+    double inactivitySec = tCutoff - tLast;
+    if (inactivitySec <= (30.0 * 86400.0)) {
+        return 1.0; // Skill is currently alive and active
+    }
+
+    // If it has been dropped, calculate the ratio of its active lifetime
     double survivalRate = activeDurationSec / observationSpanSec;
 
     // Bounded between 0.0 and 1.0
     if (survivalRate < 0.0) survivalRate = 0.0;
     if (survivalRate > 1.0) survivalRate = 1.0;
 
-    // Small active buffer adjustment for recently created skills
+    // Small active buffer adjustment for single-use skills
     if (activeDurationSec == 0.0) {
         double daysSinceCreation = observationSpanSec / 86400.0;
         if (daysSinceCreation < 30.0) {
-            survivalRate = 1.0 - (daysSinceCreation / 60.0); // High initial survival
+            survivalRate = 1.0 - (daysSinceCreation / 60.0); // Recently activated, giving it a trial window
         } else {
-            survivalRate = 0.05; // Single commit long ago
+            survivalRate = 0.01; // Used exactly once a long time ago and dropped
         }
     }
 
     return std::round(survivalRate * 10000.0) / 10000.0;
 }
+
 
 std::string SkillReuseAnalyzer::stripFrontmatter(const std::string& text) {
     size_t startPos = text.find("---");
