@@ -1,0 +1,25 @@
+{
+  "n_skills": 13000,
+  "n_reused_repos": 2854,
+  "n_reused_owners": 2391,
+  "n_over_500_lines": 802,
+  "share_over_500_lines_percent": 6.1692307692307695,
+  "exact_body_chars_matches": 1112,
+  "body_chars_within_two": 12931,
+  "body_chars_boundary_adjusted_matches": 12174,
+  "n_body_over_500_lines": 766,
+  "history_n": 3010,
+  "examples_n": 2288,
+  "examples_reused_pct": 28.059440559440556,
+  "nonexamples_reused_pct": 20.649738610903658,
+  "detector_comparison": {
+    "comparison_type": "exploratory_broad_baseline_NOT_historical_detector",
+    "agreement_percent": 51.83846153846153,
+    "cohens_kappa": 0.18476647420158926,
+    "detector_a_only": 114,
+    "detector_b_only": 6147,
+    "both_positive": 2174,
+    "both_negative": 4565,
+    "review_n": 120
+  }
+}
