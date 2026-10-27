@@ -22,39 +22,8 @@ int main() {
     SkillReuseAnalyzer analyzer(dbPath, options);
 
     if (!analyzer.isOpen()) {
-        std::cout << "[Note] SQLite database '" << dbPath << "' not found locally.\n";
-        std::cout << "Demonstrating in-memory synthetic analysis for CLion setup verification:\n\n";
-
-        // Demonstration of near-match similarity and survival rate calculations
-        std::string skillA = R"(---
-name: code-reviewer
-description: Automated code review instructions for PRs
----
-# Code Reviewer Skill
-1. Check for proper error handling.
-2. Verify unit tests cover edge cases.
-3. Ensure no hardcoded secrets or API keys.
-)";
-
-        std::string skillB = R"(---
-name: code-reviewer-v2
-description: Updated code review guidance
----
-# Code Reviewer Skill
-1. Check for proper error handling and logging.
-2. Verify unit tests cover edge cases.
-3. Ensure no hardcoded secrets, tokens, or API keys.
-4. Check code style formatting.
-)";
-
-        double sim = SkillReuseAnalyzer::calculateSimilarity(skillA, skillB);
-        double survival = SkillReuseAnalyzer::calculateSurvivalRate("2026-01-15T10:00:00Z", "2026-07-20T15:30:00Z", "2026-07-31T23:59:59Z");
-
-        std::cout << "Synthetic Near-Match Test:\n";
-        std::cout << "  Similarity Score : " << std::fixed << std::setprecision(2) << (sim * 100.0) << "%\n";
-        std::cout << "  Survival Rate    : " << (survival * 100.0) << "%\n";
-        std::cout << "  Skill Text String:\n\"" << skillA.substr(0, 120) << "...\";\n\n";
-        return 0;
+        std::cout << "[Note] SQLite database '" << dbPath << "' not found locally. Exiting program.\n";
+        return 1;
     }
 
     std::cout << "[+] Database Connected Successfully: " << dbPath << "\n";
