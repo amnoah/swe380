@@ -1,2 +1,8 @@
 /.idea
 agent_skills_sample.db
+build/
+*.db
+__pycache__/
+*.pyc
+results/my_test_run/
+results/my_test_features.csv

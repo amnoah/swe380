@@ -1,0 +1,21 @@
+# Research Question 2 — Revised Methods for Examples and Skill Length
+
+## Method to evaluate examples
+
+We use a reproducible C++ parser to identify explicit example headings and labels and fenced code blocks associated with example cues. We extract `has_examples`, `example_count`, the number of contextual example code blocks, and examples per 1,000 body word-like tokens. The primary outcome is byte-identical reuse across at least two distinct repositories. We also test reuse across at least two distinct repository owners and, for a smaller subset with observed history, whether the selected representative file has any additional recorded commits after the first. We compare example presence overall and **within each body-length tertile**. We report absolute percentage-point differences and unadjusted odds ratios within groups, followed by adjusted logistic models.
+
+To evaluate classification error, we compare our C++ detector with a separately specified broad-rule detector and construct a **disagreement-enriched manual review sample**: up to 40 A-only and 40 B-only disagreements, plus 40 other randomly selected skills. The provided broad detector is **not the second detector that reportedly achieved 86% agreement, κ=0.57, 1,144 and 626 one-sided disagreements**. To reproduce the actual comparison, pass its per-skill predictions using `--comparison-csv file_sha,has_examples`. Two reviewers independently inspect the original content (using `tools/show_skill.py`), enter 0/1 labels, and adjudicate disagreements before measuring detector performance. No accuracy numbers are claimed until gold labels are provided. Because the review oversamples disagreements, results from the full selected sample are not unbiased population estimates.
+
+## Method to evaluate skill length
+
+Our C++ implementation removes leading, properly closed YAML front matter for body metrics, parses Markdown fenced-code boundaries, and measures **prose tokens and fenced-code tokens separately**. It also records their combined word-like token count, UTF-8 codepoint count, byte count, body line count, fenced-code line count, and **raw SKILL.md line count including metadata**. Inline and indented code are not separated from prose; this is a known limitation. We report the percentage of skills whose **raw file exceeds 500 lines** as an explicit descriptive guideline, independently from a **chosen** set of sample-based body word-count tertiles. The tertiles are descriptive categories, not inherently correct thresholds.
+
+We assess continuous features with Spearman correlations and adjusted logistic regression containing `log1p(prose_word_count)` and `log1p(code_word_count)` in the same model. Odds ratios represent a one-unit change in log(1+tokens); approximate doubling odds ratios are included in the regression CSV. Covariates include representative-repository age and stars, scripts, and references; the maintenance model also includes content copy count. Models are associative, not causal. Length-group comparisons, example stratification, and different-owner reuse are included as robustness checks.
+
+## Cross-check and validity
+
+`body_chars` is part of the original GitSkills `artifacts` table. Our extractor exports `dataset_body_chars`, the UTF-8 codepoint difference, and an exact-match flag. Many mismatches are exactly minus one character, consistent with a **frontmatter delimiter/boundary convention difference**; the results include the full distribution instead of reporting false perfect agreement. The supplementary report gives the exact-match and within-±2 counts. Differences beyond the boundary convention should be manually investigated.
+
+All statistics analyze unique content hashes rather than duplicated copies. Exact copies may be cloned templates, not active agent usage. Distinct GitHub owner strings are an imperfect approximation of independent reuse. File-level commit counts do not guarantee edits to skill instructions or quality improvements, and only a minority of representative files have observed histories. Both skill version and repository metadata are measured at a snapshot, so no temporal/causal claims are made. Results generalize only to the supplied GitSkills sample unless tested on the full dataset.
+
+References: https://huggingface.co/datasets/mvaccargiu/gitskills ; https://arxiv.org/pdf/2608.10906
