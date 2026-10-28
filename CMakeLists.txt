@@ -13,6 +13,12 @@ add_executable(MySqliteApp main.cpp dependencies/sqlite3.c
         test/test.h
         test/impl/reuse/reuse_test.cpp
         test/impl/reuse/reuse_test.h
+        test/impl/examples/examples_test.cpp
+        test/impl/examples/examples_test.h
+        test/impl/length/length_test.cpp
+        test/impl/length/length_test.h
+        test/impl/completeness/completeness_test.cpp
+        test/impl/completeness/completeness_test.h
 )
 
 add_executable(swe380
@@ -20,12 +26,26 @@ add_executable(swe380
         main.h
         main.cpp
         main.h
+        evaluations/completeness/completeness_evaluator.h
+        evaluations/completeness/completeness_evaluator.cpp
+        evaluations/examples/example_evaluator.h
+        evaluations/examples/example_evaluator.cpp
+        evaluations/length/length_evaluator.cpp
+        evaluations/length/length_evaluator.h
         evaluations/readability/readability_evaluator.h
         evaluations/readability/readability_evaluator.cpp
         evaluations/reuse/reuse_evaluator.cpp
         evaluations/reuse/reuse_evaluator.h
+        evaluations/shared/markdown_utils.cpp
+        evaluations/shared/markdown_utils.h
         test/test.cpp
         test/test.h
+        test/impl/completeness/completeness_test.cpp
+        test/impl/completeness/completeness_test.h
+        test/impl/examples/examples_test.cpp
+        test/impl/examples/examples_test.h
+        test/impl/length/length_test.cpp
+        test/impl/length/length_test.h
         test/impl/readability/readability_test.cpp
         test/impl/readability/readability_test.h
         test/impl/reuse/reuse_test.cpp

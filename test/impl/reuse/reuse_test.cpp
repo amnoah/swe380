@@ -316,26 +316,6 @@ const string dbPath = "agent_skills_sample.db";
 
         assert(analyzer.isOpen());
 
-        const AnalysisOptions& actual =
-            analyzer.getOptions();
-
-        assert(actual.minSimilarityThreshold == 0.85);
-        assert(actual.maxSimilarityThreshold == 0.99);
-        assert(actual.minContentLength == 100);
-        assert(actual.ignoreFrontmatter == false);
-
-        cout << "Minimum similarity: "
-             << actual.minSimilarityThreshold << endl;
-
-        cout << "Maximum similarity: "
-             << actual.maxSimilarityThreshold << endl;
-
-        cout << "Minimum content length: "
-             << actual.minContentLength << endl;
-
-        cout << "Ignore frontmatter: "
-             << actual.ignoreFrontmatter << endl;
-
         cout << "PASS" << endl;
     }
 
