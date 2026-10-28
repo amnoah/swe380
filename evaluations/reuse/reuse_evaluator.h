@@ -1,192 +1,119 @@
-#ifndef REUSE_EVALUATOR_HPP
-#define REUSE_EVALUATOR_HPP
+#pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <memory>
-
 #include "dependencies/sqlite3.h"
 
-/**
- * @struct SkillOccurrence
- * @brief Represents an individual skill file instance mined from the GitSkills database artifacts table.
- */
+// One row from the GitSkills artifacts table. Duplicate rows are intentionally
+// retained because identical copies are part of the reuse analysis.
 struct SkillOccurrence {
-    std::string repoFullName;   ///< Repository full name (e.g., "owner/repo")
-    std::string path;           ///< File path of the SKILL.md file inside the repo
-    std::string filename;       ///< Exact file basename
-    std::string fileSha;        ///< Git blob hash (file_sha)
-    std::string content;        ///< Raw Markdown text content
-    std::string firstCommitAt;  ///< ISO-8601 UTC timestamp of first commit
-    std::string lastCommitAt;   ///< ISO-8601 UTC timestamp of last commit
-    int64_t commitCount = 0;    ///< Number of commits for this file
-    bool dedupPrimary = false;  ///< Primary representative flag
+    std::string repoFullName;
+    std::string path;
+    std::string filename;
+    std::string fileSha;
+    std::string content;
+    std::string firstCommitAt;
+    std::string lastCommitAt;
+    int64_t commitCount = 0;
+    bool dedupPrimary = false;
 };
 
-/**
- * @struct NearMatchReuseResult
- * @brief Results for a skill re-used as a near match (not exact) within a single repository.
- */
-struct NearMatchReuseResult {
-    std::string repoFullName;                ///< Target repository name
-    std::string primaryPath;                 ///< File path of the base/representative skill
-    std::string skillContent;                ///< The skill string content itself
-    size_t reuseCount = 0;                   ///< Number of near-match re-uses in this single repo
-    double averageSimilarity = 0.0;           ///< Average similarity score [0.0, 1.0]
-    std::vector<std::string> nearMatchPaths; ///< Paths of all near-matched copies in the repo
-    std::vector<std::string> nearMatchShas;  ///< Git SHAs of near-matched copies
-
-    // Temporal analytics and survival rate
-    double survivalRate = 0.0;               ///< Skill survival rate [0.0, 1.0]
-    double lifespanDays = 0.0;               ///< Active lifespan in days (last_commit - first_commit)
-    std::string firstCommitAt;               ///< Earliest commit timestamp in cluster
-    std::string lastCommitAt;                ///< Latest commit timestamp in cluster
-    int64_t totalCommits = 0;                ///< Combined commit count across instances
-};
-
-/**
- * @struct AnalysisOptions
- * @brief Configuration thresholds for near-match detection and survival rate calculation.
- */
 struct AnalysisOptions {
-    double minSimilarityThreshold = 0.80;  ///< Minimum similarity ratio for near match (80%)
-    double maxSimilarityThreshold = 0.999; ///< Upper threshold (<100% to exclude exact byte duplicates)
-    size_t minContentLength = 40;          ///< Minimum text length to filter out trivial files
-    std::string observationTimestamp = "2026-07-31T23:59:59Z"; ///< July 2026 GitSkills cutoff
-    bool ignoreFrontmatter = true;         ///< Strip YAML frontmatter before comparison
+    double minSimilarityThreshold = 0.80;
+    double maxSimilarityThreshold = 0.999;
+    std::size_t minContentLength = 1;
+    bool ignoreFrontmatter = true;
+    std::string observationTimestamp;
+
+    // Half-life for exponential recency decay. At this many days after the
+    // last commit, the recency component is 0.5.
+    double recencyHalfLifeDays = 90.0;
 };
 
-/**
- * @class GitSkillsDatabaseParser
- * @brief Base class for opening and parsing GitSkills SQLite database releases.
- *
- * Manages SQLite connection lifecycle, statement execution, and table querying
- * adhering to modern C++17 RAII principles.
- */
+struct NearMatchReuseResult {
+    std::string repoFullName;
+    std::string primaryPath;
+    std::string skillContent;
+
+    // Every other member of this connected similarity group is listed in
+    // exactly one of these vectors. Exact copies are deliberately included.
+    std::vector<std::string> identicalPaths;
+    std::vector<std::string> nearMatchPaths;
+    std::vector<std::string> identicalShas;
+    std::vector<std::string> nearMatchShas;
+
+    std::size_t identicalCopyCount = 0;
+    std::size_t nearMatchCount = 0;
+    std::size_t reuseCount = 0;
+    double averageSimilarity = 0.0;
+    double lifespanDays = 0.0;
+
+    // Persistence metrics are in [0, 1]. survivalRate is retained for API
+    // compatibility and equals persistenceScore when a cutoff is supplied.
+    // These are heuristic commit-history proxies, not proof of actual usage.
+    double survivalRate = 0.0;
+    double persistenceScore = 0.0;
+    double temporalCoverage = 0.0;
+    double recencyScore = 0.0;
+    double commitActivityScore = 0.0;
+
+    int64_t totalCommits = 0;
+    std::string firstCommitAt;
+    std::string lastCommitAt;
+};
+
 class GitSkillsDatabaseParser {
 public:
-    /**
-     * @brief Constructs parser and connects to SQLite database.
-     * @param dbPath Path to agent_skills_release.db or agent_skills_sample.db
-     */
     explicit GitSkillsDatabaseParser(const std::string& dbPath);
-
-    /**
-     * @brief Virtual destructor for polymorphic cleanup.
-     */
     virtual ~GitSkillsDatabaseParser();
 
-    // Prevent copying for RAII database handle safety
     GitSkillsDatabaseParser(const GitSkillsDatabaseParser&) = delete;
     GitSkillsDatabaseParser& operator=(const GitSkillsDatabaseParser&) = delete;
+    GitSkillsDatabaseParser(GitSkillsDatabaseParser&& other) noexcept;
+    GitSkillsDatabaseParser& operator=(GitSkillsDatabaseParser&& other) noexcept;
 
-    // Support move operations
-    GitSkillsDatabaseParser(GitSkillsDatabaseParser&&) noexcept;
-    GitSkillsDatabaseParser& operator=(GitSkillsDatabaseParser&&) noexcept;
-
-    /**
-     * @brief Checks if the database file is connected and open.
-     */
     bool isOpen() const;
-
-    /**
-     * @brief Returns total row count of the artifacts table.
-     */
     int64_t getArtifactCount() const;
-
-    /**
-     * @brief Retrieves all skill file occurrences for a specific repository.
-     * @param repoFullName Full repository identifier (e.g. "owner/repo")
-     * @return Vector of SkillOccurrence structs
-     */
     std::vector<SkillOccurrence> getSkillsByRepository(const std::string& repoFullName) const;
-
-    /**
-     * @brief Gets repository names that contain multiple (>=2) skill files.
-     * @param limit Maximum repositories to return (0 = no limit)
-     */
-    std::vector<std::string> getMultiSkillRepositories(size_t limit = 0) const;
-
-    /**
-     * @brief Helper utility parsing ISO-8601 UTC timestamp string to Unix epoch seconds.
-     * @param isoStr Timestamp string (e.g. "2026-07-22T17:07:58Z")
-     * @return Seconds since Unix epoch (0.0 if invalid)
-     */
-    static double parseIsoTimestampToEpoch(const std::string& isoStr);
+    std::vector<std::string> getMultiSkillRepositories(std::size_t limit) const;
 
 protected:
+    void checkDbConnection() const;
+    static double parseIsoTimestampToEpoch(const std::string& isoStr);
+
     sqlite3* db_ = nullptr;
     std::string dbPath_;
-
-    void checkDbConnection() const;
 };
 
-/**
- * @class SkillReuseAnalyzer
- * @brief Child class extending GitSkillsDatabaseParser to analyze intra-repository near-match skill re-use.
- *
- * Inherits database access capabilities from GitSkillsDatabaseParser, implements Jaccard token and
- * Levenshtein string similarity algorithms, detects near-match skill re-use within single repositories,
- * calculates re-use counts, provides the skill text string, and evaluates skill survival rates.
- */
 class SkillReuseAnalyzer : public GitSkillsDatabaseParser {
 public:
-    /**
-     * @brief Constructor initializing DB connection and analysis options.
-     * @param dbPath Path to SQLite database
-     * @param options Analysis thresholds and parameters
-     */
-    explicit SkillReuseAnalyzer(const std::string& dbPath, AnalysisOptions options = AnalysisOptions());
+    SkillReuseAnalyzer(const std::string& dbPath, AnalysisOptions options = {});
 
-    /**
-     * @brief Destructor.
-     */
-    ~SkillReuseAnalyzer() override = default;
-
-    /**
-     * @brief Analyzes near-match skill re-use within a single repository.
-     * @param repoFullName Target repository name (e.g., "owner/repo")
-     * @return Vector of NearMatchReuseResult structures for near-matched skills
-     */
     std::vector<NearMatchReuseResult> analyzeRepositoryReuse(const std::string& repoFullName) const;
+    std::vector<NearMatchReuseResult> analyzeAllRepositories(std::size_t maxRepos = 0) const;
 
-    /**
-     * @brief Scans multiple repositories to find near-match skill re-uses.
-     * @param maxRepos Limit on number of multi-skill repos to inspect (0 = all)
-     * @return Vector of NearMatchReuseResult structures across inspected repos
-     */
-    std::vector<NearMatchReuseResult> analyzeAllRepositories(size_t maxRepos = 0) const;
-
-    /**
-     * @brief Static method to calculate text similarity ratio between two skill strings.
-     * @param s1 First skill text
-     * @param s2 Second skill text
-     * @param stripFrontmatter Whether to remove YAML frontmatter prior to comparison
-     * @return Similarity score between 0.0 (different) and 1.0 (identical)
-     */
-    static double calculateSimilarity(const std::string& s1, const std::string& s2, bool stripFrontmatter = true);
-
-    /**
-     * @brief Calculates the skill survival rate based on first commit, last commit, and observation horizon.
-     * @param firstCommit Earliest commit ISO-8601 timestamp
-     * @param lastCommit Latest commit ISO-8601 timestamp
-     * @param observationCutoff Snapshot observation cutoff timestamp
-     * @return Bounded survival rate in range [0.0, 1.0]
-     */
+    static double calculateSimilarity(const std::string& a,
+                                      const std::string& b,
+                                      bool stripFrontmatterFlag = true);
     static double calculateSurvivalRate(const std::string& firstCommit,
-                                         const std::string& lastCommit,
-                                         const std::string& observationCutoff);
+                                        const std::string& lastCommit,
+                                        const std::string& observationCutoff);
 
-    void setOptions(const AnalysisOptions& options) { options_ = options; }
-    const AnalysisOptions& getOptions() const { return options_; }
+    // Full persistence score when the artifact's aggregate commit count is known.
+    static double calculatePersistenceScore(const std::string& firstCommit,
+                                            const std::string& lastCommit,
+                                            const std::string& observationCutoff,
+                                            int64_t commitCount,
+                                            double recencyHalfLifeDays = 90.0);
 
 private:
     AnalysisOptions options_;
 
     static std::string stripFrontmatter(const std::string& text);
+    static std::string normalizeForComparison(const std::string& text, bool stripFm);
     static std::vector<std::string> tokenize(const std::string& text);
-    static double jaccardSimilarity(const std::vector<std::string>& tokens1, const std::vector<std::string>& tokens2);
-    static size_t levenshteinDistance(const std::string& s1, const std::string& s2);
+    static double jaccardSimilarity(const std::vector<std::string>& a,
+                                    const std::vector<std::string>& b);
 };
-
-#endif // REUSE_EVALUATOR_HPP
