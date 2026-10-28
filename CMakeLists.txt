@@ -14,8 +14,6 @@ add_executable(MySqliteApp main.cpp dependencies/sqlite3.c
         test/impl/reuse/reuse_test.cpp
         test/impl/reuse/reuse_test.h
 )
-        evaluations/completeness/completeness_evaluator.cpp
-        evaluations/completeness/completeness_evaluator.h)
 
 add_executable(swe380
         main.cpp
