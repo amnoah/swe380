@@ -3,8 +3,16 @@
 #include <iostream>
 #include <iomanip>
 #include "evaluations/reuse/reuse_evaluator.h"
+#include "test/test.h"
 
 int main() {
+    bool testing = false;
+
+    if (testing) {
+        Tester::runTests();
+        return 0;
+    }
+
     std::cout << "=================================================================\n";
     std::cout << "   GitSkills Database Parser & Near-Match Skill Reuse Analyzer    \n";
     std::cout << "=================================================================\n\n";
